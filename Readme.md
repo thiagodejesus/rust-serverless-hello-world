@@ -1,15 +1,18 @@
 # How to create an aws rust lambda behind an api gateway and deploy it using docker and terraform
 
 Why
-  - Rust
-  - Serverless
-  - Docker
-  - Terraform
+
+- Rust
+- Serverless
+- Docker
+- Terraform
 
 Requirements
-  - Cargo Lambda
+
+- Cargo Lambda
 
 Create the lambda
+
 ```sh
 cargo lambda new --http rust-lambda-gw-api
 ```
@@ -21,20 +24,13 @@ The command above should create a new rust project with the below code on the ma
 ```rs
 use lambda_http::{run, service_fn, tracing, Body, Error, Request, RequestExt, Response};
 
-/// This is the main body for the function.
-/// Write your code inside it.
-/// There are some code example in the following URLs:
-/// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
-    // Extract some useful information from the request
     let who = event
         .query_string_parameters_ref()
         .and_then(|params| params.first("name"))
         .unwrap_or("world");
     let message = format!("Hello {who}, this is an AWS Lambda HTTP request");
 
-    // Return something that implements IntoResponse.
-    // It will be serialized to the right response event automatically by the runtime
     let resp = Response::builder()
         .status(200)
         .header("content-type", "text/html")
@@ -53,3 +49,31 @@ async fn main() -> Result<(), Error> {
 ```
 
 Now we are going to replace the function_handler with our logic, for this tutorial, we gonna expose a get route that Receives a name as query param and returns Hello {name}!
+
+For this, we just gonna make a little change to the template:
+
+```rs
+...
+
+async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
+    let who = event
+        .query_string_parameters_ref()
+        .and_then(|params| params.first("name"))
+        .unwrap_or("world");
+
+    let message = format!("Hello {who}!");
+
+    let resp = Response::builder()
+        .status(200)
+        .header("content-type", "text/html")
+        .body(message.into())
+        .map_err(Box::new)?;
+    Ok(resp)
+}
+
+...
+```
+
+Its a simple code that extracts the param `name` for the query, or default its value to world. Then we create or message and build the Response to send it to the Api Gateway.
+
+Now, our function is ready, we can run it with `cargo lambda watch` then make a test request with `curl http://localhost:9000/\?name\="Wilson"` to receive our Hello Wilson.
