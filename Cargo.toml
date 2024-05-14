@@ -1,5 +1,5 @@
 [package]
-name = "rust-lambda-gw-api"
+name = "hello-world"
 version = "0.1.0"
 edition = "2021"
 

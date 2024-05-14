@@ -1,31 +1,25 @@
-# How to create an aws rust lambda behind an api gateway and deploy it using docker and terraform
+# How to Create an AWS Rust Lambda Behind an API Gateway and Deploy it Using Docker and Terraform
 
-Why
+Why Rust, Serverless, and Terraform?
+Rust: I like Rust for its emphasis on safety so i am testing some approaches to use it on a realty closer of mine.
 
-- Rust
-    As I like Rust for its emphasis on safety, I'm enjoying make some projects in it.
-- Serverless
-    I think that is a simpler way to deploy some experimental projects, at least, to start my journey.
-- Docker
-    Well, to learn how we can use docker to have more flexibility around the aws runtime on lambda.
-- Terraform
-    IaC (Infrastructure as code) its better than setup deploys using aws interface, as with it i can have versioning, and reproducibility, i choose terraform because its a very famous way to do it.
+Serverless: Deploying projects as serverless functions simplifies experimentation and initial project launches.
 
-Requirements
+Terraform: Leveraging Infrastructure as Code (IaC) is preferable over manual setups due to versioning and reproducibility benefits. Terraform, being widely adopted, looks like a good way to start with IaC.
 
-- Cargo Lambda
-    Cargo lambda its a cli developed by aws to help the development of serverless rust
-    
+## Requirements
 
-Create the lambda
+- Cargo Lambda: AWS provides cargo lambda, a CLI tool to streamline the development of serverless Rust applications.
+
+1. Create the lambda
+
+To kickstart the project, we'll use cargo lambda to scaffold a new Rust project. By adding the --http flag, we configure it to handle HTTP requests from an API Gateway.
 
 ```sh
-cargo lambda new --http rust-lambda-gw-api
+cargo lambda new --http hello-world
 ```
 
-The flag --http is to create a lambda that will receive http requests from an api gateway
-
-The command above should create a new rust project with the below code on the main.rs
+This command generates a new Rust project with a basic template, we gonna made quick changes on it so the main.rs file will be like this:
 
 ```rs
 use lambda_http::{run, service_fn, tracing, Body, Error, Request, RequestExt, Response};
@@ -35,7 +29,8 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
         .query_string_parameters_ref()
         .and_then(|params| params.first("name"))
         .unwrap_or("world");
-    let message = format!("Hello {who}, this is an AWS Lambda HTTP request");
+
+    let message = format!("Hello {who}!");
 
     let resp = Response::builder()
         .status(200)
@@ -54,32 +49,100 @@ async fn main() -> Result<(), Error> {
 
 ```
 
-Now we are going to replace the function_handler with our logic, for this tutorial, we gonna expose a get route that Receives a name as query param and returns Hello {name}!
+Its a simple code that extracts the param `name` for the query, or default its value to world. Then we create a message and returns it as an Response.
 
-For this, we just gonna make a little change to the template:
+Now, our function is ready, we can run it with `cargo lambda watch` then make a test request with `curl http://localhost:9000/\?name\="Wilson"` to receive a `Hello Wilson`.
 
-```rs
-...
+To prepare for deployment, we'll build the Lambda function to generate the bootstrap.zip file
 
-async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
-    let who = event
-        .query_string_parameters_ref()
-        .and_then(|params| params.first("name"))
-        .unwrap_or("world");
+`cargo lambda build --release --arm64 --output-format zip`
 
-    let message = format!("Hello {who}!");
+2. Setting Up Terraform
 
-    let resp = Response::builder()
-        .status(200)
-        .header("content-type", "text/html")
-        .body(message.into())
-        .map_err(Box::new)?;
-    Ok(resp)
+To manage our AWS infrastructure, we'll use Terraform. Let's begin by organizing our Terraform files within a dedicated folder .infra/terraform. Inside this folder, create a file named main.tf and add the following code:
+
+File: .infra/terraform/main.tf
+```tf
+terraform {
+  required_version = ">= 1.4.6"
 }
 
-...
+provider "aws" {
+  region  = var.aws_region
+  profile = var.aws_profile
+}
+
+locals {
+  lambda_name = "serverless_rust_hello_world"
+}
+
+module "lambda_function" {
+  source = "terraform-aws-modules/lambda/aws"
+
+  function_name = local.lambda_name
+  description   = "A simple lambda that says hello"
+  runtime = "provided.al2023"
+  architectures = ["arm64"]
+  handler = "bootstrap"
+
+  create_package         = false
+  local_existing_package = "../../target/lambda/hello-world/bootstrap.zip"
+
+  tags = {
+    Name = local.lambda_name
+  }
+}
 ```
 
-Its a simple code that extracts the param `name` for the query, or default its value to world. Then we create or message and build the Response to send it to the Api Gateway.
+Next, define the variables required for our Terraform configuration in a file named variables.tf:
 
-Now, our function is ready, we can run it with `cargo lambda watch` then make a test request with `curl http://localhost:9000/\?name\="Wilson"` to receive our Hello Wilson.
+File: .infra/terraform/variables.tf
+```tf
+variable "aws_region" {
+  default = "us-east-1"
+  type    = string
+}
+
+variable "env" {
+  default     = "dev"
+  type        = string
+  description = "The environment to deploy to"
+
+}
+
+variable "aws_profile" {
+  type        = string
+  description = "The aws profile to use when running terraform"
+}
+
+```
+
+Now, let's build our Lambda function. Navigate to the Terraform directory:
+`cd .infra/terraform`
+
+Initialize Terraform:
+`terraform init`
+
+To preview the changes before applying them, run:
+`terraform plan` to see what is going to be created
+
+
+Now, let's test our Lambda function on AWS. Below is the event payload format required for testing, tailored for AWS API Gateway:
+```
+{
+  "queryStringParameters": {
+    "name": "Ago"
+  },
+  "requestContext": {
+    "http": {
+      "method": "GET",
+      "path": "/",
+      "protocol": "HTTP/1.1",
+      "sourceIp": "192.0.2.1",
+      "userAgent": "agent"
+    }
+  }
+}
+```
+
+Thats it, we already have a lambda working, on the next step we will setup the api gateway to expose this lambda to the world.
