@@ -3,13 +3,19 @@
 Why
 
 - Rust
+    As I like Rust for its emphasis on safety, I'm enjoying make some projects in it.
 - Serverless
+    I think that is a simpler way to deploy some experimental projects, at least, to start my journey.
 - Docker
+    Well, to learn how we can use docker to have more flexibility around the aws runtime on lambda.
 - Terraform
+    IaC (Infrastructure as code) its better than setup deploys using aws interface, as with it i can have versioning, and reproducibility, i choose terraform because its a very famous way to do it.
 
 Requirements
 
 - Cargo Lambda
+    Cargo lambda its a cli developed by aws to help the development of serverless rust
+    
 
 Create the lambda
 
