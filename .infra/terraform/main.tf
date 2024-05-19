@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.4.6"
+  required_version = ">= 1.8.3"
 }
 
 provider "aws" {
@@ -18,20 +18,3 @@ module "serverless_rust_hello_world" {
   deployment_file = "../../target/lambda/hello-world/bootstrap.zip"
   project_name = var.project_name
 }
-
-# module "lambda_function" {
-#   source = "terraform-aws-modules/lambda/aws"
-
-#   function_name = local.lambda_name
-#   description   = "A simple lambda that says hello"
-#   runtime       = "provided.al2023"
-#   architectures = ["arm64"]
-#   handler       = "bootstrap"
-
-#   create_package         = false
-#   local_existing_package = "../../target/lambda/hello-world/bootstrap.zip"
-
-#   tags = {
-#     Name = local.lambda_name
-#   }
-# }

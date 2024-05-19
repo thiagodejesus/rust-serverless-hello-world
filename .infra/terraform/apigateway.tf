@@ -9,7 +9,7 @@ resource "aws_apigatewayv2_stage" "default" {
   auto_deploy = true  
   description = "Default stage (i.e., Production mode)"  
   default_route_settings {  
-    throttling_burst_limit = 1  
+    throttling_burst_limit = 1
     throttling_rate_limit  = 1  
   }  
   access_log_settings {  
@@ -57,19 +57,3 @@ resource "aws_cloudwatch_log_group" "api_gateway_logs_hello" {
   log_group_class   = "STANDARD"  
   retention_in_days = 7  
 }
-
-# resource "aws_apigatewayv2_deployment" "example" {
-#   api_id      = aws_apigatewayv2_api.this.id
-#   description = "Example deployment"
-
-#   triggers = {
-#     redeployment = sha1(join(",", tolist([
-#       jsonencode(aws_apigatewayv2_integration.example),
-#       jsonencode(aws_apigatewayv2_route.example),
-#     ])))
-#   }
-
-#   lifecycle {
-#     create_before_destroy = true
-#   }
-# }

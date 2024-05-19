@@ -11,12 +11,6 @@ resource "aws_lambda_function" "this" {
   runtime       = "provided.al2023"
   handler       = "bootstrap.handler"
   timeout       = var.function_timeout
-
-  # kms_key_arn   = data.aws_kms_alias.lambda.arn
-  
-  # environment {
-  #   variables = { for item in var.function_ssm_parameter_names : upper(replace(item, "-", "_")) => aws_ssm_parameter.function_ssm_parameters[item].name }
-  # }
   
   logging_config {
     application_log_level = "INFO"
@@ -30,19 +24,6 @@ resource "aws_lambda_function" "this" {
     aws_iam_role.this,
   ]
 }
-
-# resource "aws_ssm_parameter" "function_ssm_parameters" {
-#   for_each = var.function_ssm_parameter_names
-#   name     = "/projects/${var.project_name}/lambda/${var.function_name}/${each.value}"
-#   type     = "SecureString"
-#   key_id   = data.aws_kms_alias.ssm.arn
-#   value    = "1"
-#   lifecycle {
-#     ignore_changes = [
-#       value,
-#     ]
-#   }
-# }
 
 resource "aws_cloudwatch_log_group" "this" {
   name              = "/aws/lambda/${local.full_function_name}"
@@ -91,13 +72,4 @@ data "aws_iam_policy_document" "this" {
     effect    = "Allow"
     resources = ["arn:aws:logs:${data.aws_region.this.id}:${data.aws_caller_identity.this.id}:*"]
   }
-  # statement {
-  #   sid = "workWithSSMParameters"
-  #   actions = [
-  #     "ssm:GetParameter",
-  #     "ssm:PutParameter"
-  #   ]
-  #   effect    = "Allow"
-  #   resources = [for item in aws_ssm_parameter.function_ssm_parameters : item.arn]
-  # }
 }

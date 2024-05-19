@@ -19,8 +19,3 @@ variable "function_timeout" {
   type        = number
   default     = 15
 }
-# variable "function_ssm_parameter_names" {
-#   description = "A set of SSM parameter names to be precreated for the function (env variables will be precreated as well)"
-#   type        = set(string)
-#   default     = []
-# }
